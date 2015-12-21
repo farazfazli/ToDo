@@ -19,51 +19,61 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-
     private static final String PREFS_FILE = "com.farazfazli.todo.preferences";
     private static final String KEY_EDITTEXT = "key_edittext";
     private static final String CURRENT_CURSOR_POSITION = "key_currentcursorposition";
+    private static final String NUMBER_OF_TODOS = "key_numberoftodos";
     private SharedPreferences.Editor mEditor;
     private SharedPreferences mSharedPreferences;
     private EditText mTaskField;
     private ListView mListView;
     //    private HashMap<String, String> mToDoList; TODO: Implement HashMap with task & "doing"/"done"
-    private ArrayList<String> mToDoList;
+    private ArrayList<String> mToDoList = new ArrayList<>();
     private ArrayAdapter<String> mToDoAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mTaskField = (EditText) findViewById(R.id.taskField);
         mListView = (ListView) findViewById(R.id.listView);
+
         mSharedPreferences = getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
-        mSharedPreferences = getSharedPreferences(CURRENT_CURSOR_POSITION, Context.MODE_PRIVATE);
+
         mEditor = mSharedPreferences.edit();
-        String currentToDo = mSharedPreferences.getString(KEY_EDITTEXT, "");
-        int currentCursorPosition = mSharedPreferences.getInt(CURRENT_CURSOR_POSITION, 0);
-        mTaskField.setText(currentToDo);
-        Log.i("[CURSOR]", currentCursorPosition + "");
-        mToDoList = new ArrayList<String>();
+
         mToDoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_checked, mToDoList);
         mListView.setAdapter(mToDoAdapter);
         mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+
+        String currentToDo = mSharedPreferences.getString(KEY_EDITTEXT, "");
+        int currentCursorPosition = mSharedPreferences.getInt(CURRENT_CURSOR_POSITION, 0);
+        int numberOfToDos = mSharedPreferences.getInt(NUMBER_OF_TODOS, 0);
+
+        if (numberOfToDos > 0 && mToDoList != null && mToDoList.size() == 0) {
+            Log.i("[RECOVERED TODOS]", numberOfToDos + "");
+            for (int i = 0; i < numberOfToDos; i++) {
+                mToDoList.add(i, mSharedPreferences.getString("TODO_" + i, ""));
+                if (mSharedPreferences.getBoolean("ISCHECKED_" + i, true)) {
+                    setItemChecked((TextView) mToDoAdapter.getView(i, null, mListView), i);
+                    Log.i("[STRIKE]", "Task: " + i);
+                }
+            }
+        }
+
+        mTaskField.setText(currentToDo);
+
+        Log.i("[RECOVERED TEXT]", currentToDo);
+        Log.i("[RECOVERED CURSOR]", currentCursorPosition + "");
+
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        // TODO: Add list saving functionality, either locally or with Parse
+            // TODO: Add list saving functionality, either locally or with Parse
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.i("[TAP]", "Strikethrough");
                 TextView item = (TextView) view;
-                if (!((item.getPaintFlags() & Paint.STRIKE_THRU_TEXT_FLAG ) > 0)){
-                    item.setPaintFlags(item.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
-                    mListView.setItemChecked(position, true);
-                } else {
-                    // http://stackoverflow.com/questions/18881817/removing-strikethrough-from-textview
-                    item.setPaintFlags(item.getPaintFlags() & (~ Paint.STRIKE_THRU_TEXT_FLAG));
-                    mListView.setItemChecked(position, false);
-                    Log.i("[TAP]", "Un-strike");
-                }
-                if(mToDoList.size() < 2) {
+                setItemChecked(item, position);
+                if (mToDoList.size() < 2) {
                     Toast.makeText(getBaseContext(), "Hold to delete!", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -74,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.i("[LONG TAP]", "Delete");
                 TextView item = (TextView) view;
-                item.setPaintFlags(item.getPaintFlags() & (~ Paint.STRIKE_THRU_TEXT_FLAG));
+                item.setPaintFlags(item.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
                 mListView.setItemChecked(position, false);
                 mToDoList.remove(position);
                 mToDoAdapter.notifyDataSetChanged();
@@ -89,9 +99,14 @@ public class MainActivity extends AppCompatActivity {
         mTaskField.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                mToDoList.add(mTaskField.getText().toString());
-                mTaskField.getText().clear();
-                return false;
+                if (mTaskField.getText().toString().length() > 2) {
+                    mToDoList.add(mTaskField.getText().toString());
+                    mTaskField.getText().clear();
+                    return false;
+                } else {
+                    Toast.makeText(getBaseContext(), "ToDo too short!", Toast.LENGTH_SHORT).show();
+                }
+                return true;
             }
         });
     }
@@ -101,6 +116,28 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         mEditor.putString(KEY_EDITTEXT, mTaskField.getText().toString());
         mEditor.putInt(CURRENT_CURSOR_POSITION, mTaskField.getSelectionStart());
+        mEditor.putInt(NUMBER_OF_TODOS, mToDoList.size());
+        for (int i = 0; i < mToDoList.size(); i++) {
+            mEditor.putString("TODO_" + i, mToDoList.get(i));
+            if (mListView.isItemChecked(i)) {
+                mEditor.putBoolean("ISCHECKED_" + i, true);
+            } else {
+                mEditor.putBoolean("ISCHECKED_" + i, false);
+            }
+        }
         mEditor.apply();
+    }
+
+    public void setItemChecked(TextView item, int position) {
+        if ((!((item.getPaintFlags() & Paint.STRIKE_THRU_TEXT_FLAG ) > 0))) {
+            Log.i("[TAP]", "Strikethrough");
+            item.setPaintFlags(item.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            mListView.setItemChecked(position, true);
+        } else {
+            // http://stackoverflow.com/questions/18881817/removing-strikethrough-from-textview
+            Log.i("[TAP]", "Un-strike");
+            item.setPaintFlags(item.getPaintFlags() & (~ Paint.STRIKE_THRU_TEXT_FLAG));
+            mListView.setItemChecked(position, false);
+        }
     }
 }
