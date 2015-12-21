@@ -129,14 +129,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setItemChecked(TextView item, int position) {
-        if ((!((item.getPaintFlags() & Paint.STRIKE_THRU_TEXT_FLAG ) > 0))) {
+        if ((!((item.getPaintFlags() & Paint.STRIKE_THRU_TEXT_FLAG) > 0))) {
             Log.i("[TAP]", "Strikethrough");
             item.setPaintFlags(item.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             mListView.setItemChecked(position, true);
         } else {
             // http://stackoverflow.com/questions/18881817/removing-strikethrough-from-textview
             Log.i("[TAP]", "Un-strike");
-            item.setPaintFlags(item.getPaintFlags() & (~ Paint.STRIKE_THRU_TEXT_FLAG));
+            item.setPaintFlags(item.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
             mListView.setItemChecked(position, false);
         }
     }
