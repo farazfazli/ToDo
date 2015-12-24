@@ -16,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,9 +28,12 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences mSharedPreferences;
     private EditText mTaskField;
     private ListView mListView;
-    //    private HashMap<String, String> mToDoList; TODO: Implement HashMap with task & "doing"/"done"
+//    private HashMap<String, String> mToDoList; TODO: Implement HashMap with task & "doing"/"done"
     private ArrayList<String> mToDoList = new ArrayList<>();
     private ArrayAdapter<String> mToDoAdapter;
+
+    private boolean hasShownToast = false;
+    private boolean hasDeletedAtLeastOnce = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,13 +72,13 @@ public class MainActivity extends AppCompatActivity {
         Log.i("[RECOVERED CURSOR]", currentCursorPosition + "");
 
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            // TODO: Add list saving functionality, either locally or with Parse
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 TextView item = (TextView) view;
                 setItemChecked(item, position);
-                if (mToDoList.size() < 2) {
+                if (hasShownToast == false && hasDeletedAtLeastOnce == false) {
                     Toast.makeText(getBaseContext(), "Hold to delete!", Toast.LENGTH_SHORT).show();
+                    hasShownToast = true;
                 }
             }
         });
@@ -87,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
                 item.setPaintFlags(item.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
                 mListView.setItemChecked(position, false);
                 mToDoList.remove(position);
+                hasDeletedAtLeastOnce = true;
                 mToDoAdapter.notifyDataSetChanged();
                 return false;
             }
@@ -129,8 +134,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setItemChecked(TextView item, int position) {
-        if ((!((item.getPaintFlags() & Paint.STRIKE_THRU_TEXT_FLAG) > 0))) {
-            Log.i("[TAP]", "Strikethrough");
+        if (!mListView.isItemChecked(position) &&
+                !((item.getPaintFlags() & Paint.STRIKE_THRU_TEXT_FLAG) > 0)) {
+        Log.i("[TAP]", "Strikethrough");
             item.setPaintFlags(item.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             mListView.setItemChecked(position, true);
         } else {
